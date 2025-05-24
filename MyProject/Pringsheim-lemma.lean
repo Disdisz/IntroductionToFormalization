@@ -64,17 +64,25 @@ lemma obvious' (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
         , main⟩
 
 
-lemma sumform {φ :  ℂ → ℂ }
+lemma sumform{z: ℂ } {φ :  ℂ → ℂ }
     {μ : ℝ }
     {ser_at_ρ : FormalMultilinearSeries ℂ ℂ ℂ }
     {ε : ENNReal}
     (has_ser_on_ball : HasFPowerSeriesOnBall φ ser_at_ρ ↑μ (2 / 3 * ε))
-    : ∀ z ∈ EMetric.ball 0 (2/3 * ε ),  φ (↑μ + z) = (∑' (b : ℕ), ((1 : ℝ)  / ↑(b.factorial)) • (iteratedFDeriv ℂ b φ ↑μ) fun x ↦ z)  := by--2 := by--∑' n, (fun n ↦ ((1 : ℝ)  / ↑(n.factorial)) • (iteratedFDeriv ℂ n φ ↑μ)) := by
-    intro z hz
+    : z ∈ EMetric.ball 0 (2/3 * ε ) →    φ (↑μ + z) = (∑' (b : ℕ), ((1 : ℝ)  / ↑(b.factorial)) • (iteratedFDeriv ℂ b φ ↑μ) fun _ ↦ z)  := by--2 := by--∑' n, (fun n ↦ ((1 : ℝ)  / ↑(n.factorial)) • (iteratedFDeriv ℂ n φ ↑μ)) := by
+    intro hz
     apply has_ser_on_ball.hasSum_iteratedFDeriv at hz
     apply HasSum.tsum_eq at hz
     simp only [hz.symm, smul_eq_mul, one_div, Complex.real_smul, Complex.ofReal_inv,
       Complex.ofReal_natCast]          --tää on sus koska riippuu siitä, miten nimesin b:n
+
+
+example (l μ : ℝ ) : ‖l + μ‖ₑ ≤ ‖l‖ₑ + ‖μ‖ₑ := by
+    exact ENormedAddMonoid.enorm_add_le l μ
+
+lemma dist_tri (l μ ρ : ℝ ) : ‖l - μ‖ₑ ≤ ‖l-ρ‖ₑ + ‖ρ-μ‖ₑ := by
+    rw [(by simp only [sub_add_sub_cancel] : l - μ = (l - ρ) + (ρ - μ))]
+    exact ENormedAddMonoid.enorm_add_le (l - ρ) (ρ - μ)
 
 
 --hada martin
@@ -91,13 +99,13 @@ theorem pringsheim (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
     cases' h_ser_at_ρ with ε' h_series
     unfold HasFPowerSeriesOnBall at h_series
     have usein := le_trans (min_le_left ε' ↑ρ.toNNReal) h_series.r_le
-    have ε_pos : ε' > 0 := by exact h_series.r_pos
+    have ε'_pos : ε' > 0 := by exact h_series.r_pos
     have obvious : HasFPowerSeriesOnBall φ ser_at_ρ ↑ρ (min ε' ρ.toNNReal) :=
         {
             r_le := usein,
             r_pos := by
                 simp only [lt_inf_iff, ENNReal.coe_pos, Real.toNNReal_pos]
-                exact ⟨ε_pos, h_rad_pos_fin⟩,
+                exact ⟨ε'_pos, h_rad_pos_fin⟩,
             hasSum := by
                 intro y hy
                 have biggerBall : y ∈ EMetric.ball 0 ε' := by
@@ -125,13 +133,11 @@ theorem pringsheim (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
                 --have check : y =
                 --have in_bigger_ball :  ∈ EMetric.ball 0 ε := by sorry
 
-                #check obvious.hasSum
+                --#check obvious.hasSum
 
                 sorry
         }
-    -- have analytic_at_μ : AnalyticAt ℂ φ ↑μ := by
-    --     use ser_at_ρ, 2 / 3 * ε
-    have taylorsum := sumform has_pow_at_μ
+
     let l : ℝ := ρ + ε.toReal / 4
     let l' := l - μ
     have l_le_bord : l < ρ + ε.toReal / 3 := by
@@ -139,12 +145,36 @@ theorem pringsheim (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
         repeat norm_num
     have l'_in_bμ : l' ∈ EMetric.ball 0 (2 / 3 * ε) := by
         simp only [EMetric.mem_ball, edist_zero_right]
+        unfold l'
+        have simplification : ‖l - μ‖ₑ.toReal = |l - μ| := by rfl
+        have ε_ne_zero : ε.toReal ≠ 0 :=  Ne.symm (ne_of_lt ε_pos) --turha
+        have ε_ne_top : ε ≠ ⊤ := by
+            exact Ne.symm (ne_of_apply_ne ENNReal.toReal fun a ↦ ε_ne_zero (id (Eq.symm a))) --ENNReal.toReal_ne_zero
+        have not_top : ‖l - μ‖ₑ ≠ ⊤ := by exact enorm_ne_top
+        rewrite [<- ENNReal.toReal_lt_toReal not_top]--ENNReal.ofReal_ne_top ENNReal.ofReal_ne_top ]
+        ·   rewrite [simplification]
+            simp only [ENNReal.toReal_mul, ENNReal.toReal_div, ENNReal.toReal_ofNat]
+            rewrite [(by simp only [sub_add_sub_cancel]: |l- μ| = |(l-ρ) + (ρ-μ)|)]
+            --TODO:
+            --lt_of_le_of_lt kolmio + oikean jako kahteen
+            sorry
+        ·   refine ENNReal.mul_ne_top ?_ ε_ne_top
+            refine not_isMax_iff_ne_top.mp ?_
+            unfold IsMax
+            push_neg
+            use 1
+            exact ⟨by ---upcastauksen kautta
+                ---VITTU
+                sorry
+                , by
+                --norm_num
+                sorry
+                ⟩
+            --refine ENNReal.inv_ne_zero.mp ?_
+              ---TODO why is this necessary
+    #check  sumform has_pow_at_μ
+     l'_in_bμ
 
-        sorry
-    --apply has_pow_at_μ.hasSum_iteratedFDeriv
-    --#check AnalyticAt.hasFPowerSeriesAt
-    #check HasFPowerSeriesOnBall.hasSum_iteratedFDeriv--hasFPowerSeriesWithinOnBall
-    --#check HasFPowerSeriesWithinOnBall
 
     sorry
 
