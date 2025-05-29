@@ -1,3 +1,5 @@
+
+
 import Mathlib
 
 import Mathlib.Data.Complex.Basic
@@ -64,12 +66,49 @@ lemma obvious' (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
         , main⟩
 
 
-lemma sumform{z: ℂ } {φ :  ℂ → ℂ }
+example (f: ℕ → ℂ ) (t := Finset.range 1) :
+    ∑' x , f x = f 0:= by sorry
+
+example (f : ℕ → ℕ → ℂ ) (m : ℕ ) :
+    --∑ n ∈ (Finset.range m), ∑ k ∈ (Finset.range n), f k
+    (Finset.range m).sum (λ i => (Finset.range (i + 1) ).sum (λ j => f i j))
+    = (Finset.range m).sum (λ j => (Finset.Ico j m ).sum (λ j => f i j)) := by
+    --rw [Finset.sum_comm]
+  -- Now we are summing over j ∈ range m, i ∈ Icc j (m - 1)
+  -- because originally j ≤ i < m, so i ∈ [j, m)
+    --rfl
+    sorry
+    -- simp only [Finset.range, Finset.sum_insert, Finset.not_mem_range_self] -- i = 0, 1, 2
+
+    -- simp only [Multiset.range_succ, Multiset.range_zero, Multiset.cons_zero, Finset.mk_cons,
+    --   Finset.cons_eq_insert, Finset.sum_mk, Finset.mem_insert, OfNat.ofNat_ne_one, Finset.mem_mk,
+    --   Multiset.mem_singleton, OfNat.ofNat_ne_zero, or_self, not_false_eq_true, Finset.sum_insert,
+    --   Multiset.map_cons, Multiset.map_singleton, Multiset.sum_cons, Multiset.sum_singleton,
+    --   one_ne_zero, Multiset.map_zero, Multiset.sum_zero, add_zero]-- only [Finset.range_zero, Finset.sum_empty]  -- i = 0 \u2192 sum is 0
+    -- ring
+
+
+
+open Finset BigOperators
+
+def I : Finset ℕ := {0, 1, 2}
+
+def J (i : ℕ) : Finset ℕ := {0, 1, 2}
+
+def f (i j : ℕ) : ℕ := i + j
+
+def result : ℕ := I.sum (λ i => (J i).sum (λ j => f i j))
+
+#eval result  -- Output: 27
+
+
+
+lemma sumform (z : ℂ  ) {φ :  ℂ → ℂ }
     {μ : ℝ }
     {ser_at_ρ : FormalMultilinearSeries ℂ ℂ ℂ }
     {ε : ENNReal}
     (has_ser_on_ball : HasFPowerSeriesOnBall φ ser_at_ρ ↑μ (2 / 3 * ε))
-    : z ∈ EMetric.ball 0 (2/3 * ε ) →    φ (↑μ + z) = (∑' (b : ℕ), ((1 : ℝ)  / ↑(b.factorial)) • (iteratedFDeriv ℂ b φ ↑μ) fun _ ↦ z)  := by--2 := by--∑' n, (fun n ↦ ((1 : ℝ)  / ↑(n.factorial)) • (iteratedFDeriv ℂ n φ ↑μ)) := by
+    : (↑z : ℂ) ∈ EMetric.ball 0 (2/3 * ε ) →    φ (↑μ + ↑z) = (∑' (b : ℕ), ((1 : ℝ)  / ↑(b.factorial)) • (iteratedFDeriv ℂ b φ ↑μ) fun _ ↦ ↑z)  := by--2 := by--∑' n, (fun n ↦ ((1 : ℝ)  / ↑(n.factorial)) • (iteratedFDeriv ℂ n φ ↑μ)) := by
     intro hz
     apply has_ser_on_ball.hasSum_iteratedFDeriv at hz
     apply HasSum.tsum_eq at hz
@@ -83,6 +122,87 @@ example (l μ : ℝ ) : ‖l + μ‖ₑ ≤ ‖l‖ₑ + ‖μ‖ₑ := by
 lemma dist_tri (l μ ρ : ℝ ) : ‖l - μ‖ₑ ≤ ‖l-ρ‖ₑ + ‖ρ-μ‖ₑ := by
     rw [(by simp only [sub_add_sub_cancel] : l - μ = (l - ρ) + (ρ - μ))]
     exact ENormedAddMonoid.enorm_add_le (l - ρ) (ρ - μ)
+
+lemma switch_order (r: ℝ ) : r = 0 := by
+    sorry
+
+open scoped BigOperators
+open Complex
+
+lemma nth_deriv_of_series(r: ENNReal)  (hr: r > 0) (φ : ℂ → ℂ ) (b: ℕ ) (a : ℝ  ) --(hφ : AnalyticAt ℂ φ 0)
+    --(h_real : ∀ n : ℕ , (hφ.choose.coeff n).im = 0)
+    --(h_pos : ∀ n : ℕ , (hφ.choose.coeff n).re ≥ 0)
+    --(h_rad_pos_fin : hφ.choose.radius.toReal > 0)  --ehkä tämä toiseen muotoon (pos oletus pois tästä koska on jo analyticatissa)
+    (ser_at_0 : FormalMultilinearSeries ℂ ℂ ℂ )
+    (on_ball_at_a  : HasFPowerSeriesOnBall φ ser_at_0 0 r)
+    (ha : (↑a : ℂ ) ∈ EMetric.ball 0 r)
+
+    --(φ a = ∑' (b : ℕ), (1 / ↑b.factorial) • (iteratedFDeriv ℂ b φ a) fun x ↦ 0)
+    : (iteratedFDeriv ℂ b φ a) (fun x ↦ a) = ∑' m, a ^m * ser_at_0.coeff (m + b) * ((m + b).factorial/m.factorial)   := by
+    induction b
+    ·   simp only [iteratedFDeriv_zero_apply, add_zero]
+        have obv : (a : ℂ ) ∈ EMetric.ball 0 r := by sorry
+        apply on_ball_at_a.hasSum at obv
+        have now : (∑' n, (ser_at_0 n) fun x ↦ a )= (φ (0 + a)) := by
+            exact HasSum.tsum_eq obv
+        simp at now
+        rw [<- now]
+        have eq_one (n: ℕ): ((↑n.factorial : ℂ ) / (↑n.factorial: ℂ )) = 1 := by
+            refine (div_eq_one_iff_eq ?_).mpr rfl
+            rewrite [Nat.cast_ne_zero]
+            exact Nat.factorial_ne_zero n
+        conv in (↑n.factorial / ↑n.factorial) =>
+            rw [eq_one m]
+        simp only [mul_one]
+    ·   --levita iteratedfderiv
+        --apply ass
+        --pitäis toimia
+        sorry
+    --rw [HasFPowerSeriesOnBall.iteratedFDeriv_eq_sum_of_completeSpace on_ball_at_μ]
+
+    -- have  ∑' (n : ℕ), ser_at_ρ.coeff (n + b) * ↑(n + b).factorial / ↑n.factorial * a ^ n
+    --     apply tsum_congr
+
+    -- by_cases h : k < b
+    -- · simp [h]
+    -- · push_neg at h
+    --     let n := k - b
+    --     have : k = n + b := by rw [Nat.add_sub_of_le h]
+    --     rw [this]
+    --     simp only [this, zero_add]
+    --     -- symmetry of coefficients lets us assume all `a`s at the end
+    --     congr 1
+    --     -- `ser_at_ρ (n + b) (λ i ↦ if i < n then 0 else a) = ser_at_ρ.coeff (n + b) * a^n`
+        -- requires `ser_at_ρ` to be symmetric (which it is)
+        -- So, apply the definition of symmetric multilinear maps on repeated variables
+    --sorry
+
+    --rw [ContinuousMultilinearMap.iteratedFDeriv_eq φ b]
+    --#check HasFPowerSeriesOnBall.hasFPowerSeriesOnBall_iteratedFDeriv
+    --#check on_ball_at_μ.iteratedFDeriv_eq_sum_of_completeSpace
+    --nth_rewrite 1 [on_ball_at_μ.iteratedFDeriv_eq_sum_of_completeSpace]
+    -- simp only [
+    --     --prod_const,
+    --     card_univ,
+    --     --FormalMultilinearSeries.apply_eq_prod_smul_coeff,
+    --     Fintype.card_fin,
+    --     --smul_eq_mul,
+    --     sum_const,
+    --     nsmul_eq_mul,
+    --     Fintype.card_perm]
+    -- have now : (a ^ b * ser_at_ρ.coeff b) = 1 := by
+
+       -- sorry
+    -- have permutations_fac : Fintype.card (Equiv.Perm (Fin b)) = b.factorial := by
+    --     rewrite [Fintype.card_perm]
+    --     simp
+    --have moii :=  on_ball_at_μ.iteratedFDeriv_eq_sum_of_completeSpace
+
+
+
+
+
+
 
 
 --hada martin
@@ -143,7 +263,7 @@ theorem pringsheim (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
     have l_le_bord : l < ρ + ε.toReal / 3 := by
         refine (Real.add_lt_add_iff_left ρ).mpr (div_lt_div_of_pos_left ε_pos ?_ ?_  )
         repeat norm_num
-    have l'_in_bμ : l' ∈ EMetric.ball 0 (2 / 3 * ε) := by
+    have l'_in_bμ : (l' : ℂ) ∈ EMetric.ball 0 (2 / 3 * ε) := by
         simp only [EMetric.mem_ball, edist_zero_right]
         unfold l'
         have simplification : ‖l - μ‖ₑ.toReal = |l - μ| := by rfl
@@ -151,63 +271,124 @@ theorem pringsheim (φ : ℂ → ℂ ) (hφ : AnalyticAt ℂ φ 0)
         have ε_ne_top : ε ≠ ⊤ := by
             exact Ne.symm (ne_of_apply_ne ENNReal.toReal fun a ↦ ε_ne_zero (id (Eq.symm a))) --ENNReal.toReal_ne_zero
         have not_top : ‖l - μ‖ₑ ≠ ⊤ := by exact enorm_ne_top
-        rewrite [<- ENNReal.toReal_lt_toReal not_top]--ENNReal.ofReal_ne_top ENNReal.ofReal_ne_top ]
-        ·   rewrite [simplification]
-            simp only [ENNReal.toReal_mul, ENNReal.toReal_div, ENNReal.toReal_ofNat]
-            rewrite [(by simp only [sub_add_sub_cancel]: |l- μ| = |(l-ρ) + (ρ-μ)|)]
-            --TODO:
-            --lt_of_le_of_lt kolmio + oikean jako kahteen
-            sorry
-        ·   refine ENNReal.mul_ne_top ?_ ε_ne_top
-            refine not_isMax_iff_ne_top.mp ?_
-            unfold IsMax
-            push_neg
-            use 1
-            exact ⟨by ---upcastauksen kautta
-                ---VITTU
-                sorry
-                , by
-                --norm_num
-                sorry
-                ⟩
-            --refine ENNReal.inv_ne_zero.mp ?_
+        sorry
+        -- rewrite [<- ENNReal.toReal_lt_toReal not_top]--ENNReal.ofReal_ne_top ENNReal.ofReal_ne_top ]
+        -- ·   rewrite [simplification]
+        --     simp only [ENNReal.toReal_mul, ENNReal.toReal_div, ENNReal.toReal_ofNat]
+        --     rewrite [(by simp only [sub_add_sub_cancel]: |l- μ| = |(l-ρ) + (ρ-μ)|)]
+        --     --TODO:
+        --     --lt_of_le_of_lt kolmio + oikean jako kahteen
+        --     sorry
+        -- ·   refine ENNReal.mul_ne_top ?_ ε_ne_top
+        --     refine not_isMax_iff_ne_top.mp ?_
+        --     unfold IsMax
+        --     push_neg
+        --     use 1
+        --     exact ⟨by ---upcastauksen kautta
+        --         ---VITTU
+        --         sorry
+        --         , by
+        --         --norm_num
+        --         sorry
+        --         ⟩
+        --     --refine ENNReal.inv_ne_zero.mp ?_
               ---TODO why is this necessary
-    #check  sumform has_pow_at_μ
-     l'_in_bμ
+    -- have zero_in_ball : (0 : ℂ )  ∈ EMetric.ball 0 (2 / 3 * ε) := by
+    --     simp
+    --     exact obvious.r_pos
+    -- have sum_at_μ := sumform 0 has_pow_at_μ zero_in_ball
+
+    have sum_at_l := sumform l' has_pow_at_μ l'_in_bμ
+    let α := μ / ρ
+    have α_lt_1 : α < 1 := by sorry
+    let δ := (ρ - ε.toReal/3) / μ  - 1
+    have δ_pos : δ > 0 := by sorry
+    clear usein
+    clear obvious
+    clear l_le_bord
+    clear l'_in_bμ
+    --uusin pohdinta: missä on potenssihomma? (= mikä on iteratedFDeriv)
+    have derivaattamuokkaus (n: ℕ):= nth_deriv_of_series
+        (ENNReal.ofReal ρ)
+        (by exact ENNReal.ofReal_pos.mpr h_rad_pos_fin)
+        (φ)
+        (n)
+        (μ)
+        (hφ.choose)
+        (by sorry)  --simlpe
+        (by sorry)  --simple
 
 
+
+    --have final_sum : summable?∑' sorry := by sorry
+
+
+    have analytic_at_too_far : AnalyticAt ℂ φ ↑(ρ + ε.toReal/4) := by sorry
+    have size_ρplus : (↑|ρ  + ε.toReal/4| : ℂ ) = ρ + ε.toReal/4 := by sorry
+    --formal_multilinear_series.not_summable_norm_of_radius_lt_nnnorm
+    --exact?
     sorry
 
 
+    lemma sarjayritys : 1 = 1 := by sorry
+
+
+
+    theorem katko
+        (φ : ℂ → ℂ)
+        (hφ : AnalyticAt ℂ φ 0)
+        (h_real : ∀ (n : ℕ), ((Exists.choose hφ).coeff n).im = 0)
+        (h_pos : ∀ (n : ℕ), ((Exists.choose hφ).coeff n).re ≥ 0)
+        (h_rad_pos_fin : (Exists.choose hφ).radius.toReal > 0)
+        (ρ : ℝ := (Exists.choose hφ).radius.toReal)
+        (ser_at_ρ : FormalMultilinearSeries ℂ ℂ ℂ)
+        (ε' : ENNReal)
+        (h_series : HasFPowerSeriesOnBall φ ser_at_ρ (↑(Exists.choose hφ).radius.toReal) ε')
+        (usein : min ε' ↑ρ.toNNReal ≤ ser_at_ρ.radius)
+        (ε'_pos : ε' > 0)
+        (obvious : HasFPowerSeriesOnBall φ ser_at_ρ (↑ρ) (min ε' ↑ρ.toNNReal))
+        (ε : ENNReal := min ε' ↑ρ.toNNReal)
+        (ε_pos : 0 < ε.toReal)
+        (μ : ℝ := ρ - ε.toReal / 3)
+        (has_pow_at_μ : HasFPowerSeriesOnBall φ ser_at_ρ (↑μ) (2 / 3 * ε))
+        (l : ℝ := ρ + ε.toReal / 4)
+        (l' : ℝ := l - μ)
+        (l_le_bord : l < ρ + ε.toReal / 3)
+        (l'_in_bμ : ↑l' ∈ EMetric.ball 0 (2 / 3 * ε))
+        (sum_at_l : φ (↑μ + ↑l') = ∑' (b : ℕ), (1 / ↑b.factorial) • (iteratedFDeriv ℂ b φ ↑μ) fun x ↦ ↑l')
+        : False := by
+        let α := μ / ρ
+
+        sorry
 
 
     --def taylorCoeff f z₀ n := (Analysis.Calculus.iterated_deriv ℂ  n f z₀ ) / (n.factorial : ℂ )
 
 
-    example (hf : AnalyticAt ℂ f z₀) :
-    ∃ r > 0, ∀ z ∈ EMetric.ball z₀ r, f z = ∑' n, (iteratedDeriv n f z₀ ) / (n.factorial : ℂ ) * (z-z₀)^n := by
-        rcases hf.hasFPowerSeriesAt with ⟨r, hconv⟩
-        use r, hconv.r_pos
-        intro z hz
-        apply hconv.hasSum at hz
+    -- example (hf : AnalyticAt ℂ f z₀) :
+    -- ∃ r > 0, ∀ z ∈ EMetric.ball z₀ r, f z = ∑' n, (iteratedDeriv n f z₀ ) / (n.factorial : ℂ ) * (z-z₀)^n := by
+    --     rcases hf.hasFPowerSeriesAt with ⟨r, hconv⟩
+    --     use r, hconv.r_pos
+    --     intro z hz
+    --     apply hconv.hasSum at hz
 
 
 
-        --unfold HasSum at hz
+    --     --unfold HasSum at hz
 
-        --#check hconv.hasSum
+    --     --#check hconv.hasSum
 
-        --exact hz
-
-
-    --have ε_fin : ε < hφ.choose.radius := by exact h_series.r_le
-
-    --rename_bvar (Exists.choose hφ).radius.toReal ρ at *
+    --     --exact hz
 
 
-        sorry
+    -- --have ε_fin : ε < hφ.choose.radius := by exact h_series.r_le
 
-    --Complex.taylorSeries_eq_on_ball'
+    -- --rename_bvar (Exists.choose hφ).radius.toReal ρ at *
+
+
+    --     sorry
+
+    -- --Complex.taylorSeries_eq_on_ball'
 
 
 
