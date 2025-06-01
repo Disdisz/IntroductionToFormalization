@@ -94,8 +94,53 @@ lemma dist_tri (l μ ρ : ℝ ) : ‖l - μ‖ₑ ≤ ‖l-ρ‖ₑ + ‖ρ-μ�
   rw [(by simp only [sub_add_sub_cancel] : l - μ = (l - ρ) + (ρ - μ))]
   exact ENormedAddMonoid.enorm_add_le (l - ρ) (ρ - μ)
 
-lemma switch_order (r: ℝ ) : r = 0 := by
-  sorry
+
+
+example  (b : ℕ) : Set.Finite {x | ∃ i ≤ b, x = (i, b)} := by
+  -- The set is a subset of (ℕ × ℕ)
+  -- It's equal to the image of {0, ..., b} under the map i ↦ (i, b)
+  let s := (Finset.range (b + 1)).image (fun i ↦ (i, b))
+  apply Set.Finite.ofFinset s
+  intro x
+  simp only [Set.mem_setOf_eq]-- only [Finset.mem_image, Finset.mem_range, mem_set_of_eq]
+  constructor
+  · intro hx
+    use x.1
+    constructor
+    · sorry
+    · sorry
+    --rintro ⟨i, hi, rfl⟩
+    --exact ⟨i, Nat.lt_succ_iff.mp hi, rfl⟩
+  · rintro ⟨i, hi, rfl⟩
+    sorry
+    --exact ⟨i, Nat.lt_succ_iff.mpr hi, rfl⟩
+
+open Function Set
+--we need a lemma stating that f.uncurry is summble whenn f is twice summable
+lemma switch_order (f : ℕ → ℕ → ℂ ) (hf : Summable (Function.uncurry fun j i ↦ {x | ∃ i ≤ j, (i, j) = x}.indicator (Function.uncurry f) (i, j)))
+  : ∑' (i : ℕ ) (j: ℕ ), {(i, j) | i ≤ j }.indicator (f.uncurry) (i , j) = ∑' (j : ℕ) (i : ℕ ), {(i, j) | i ≤ j }.indicator (f.uncurry) (i , j):= by
+  refine Summable.tsum_comm' ?_ ?_ ?_
+  · exact hf
+  · intro b
+    have fin : Set.Finite {x | ∃ i ≤ b, (i, b) = x} := by
+      sorry
+    unfold Summable
+    --use Finset.sum {x | ∃ i ≤ b, (i, b) = x} (Function.uncurry f)
+    --clearly this is true but slightly painful
+    sorry
+  · intro c
+    have right? : (Function.uncurry fun j i ↦ {x | ∃ i ≤ j, (i, j) = x}.indicator (Function.uncurry f) (i, j)) =  { (i, j)  : (ℕ × ℕ ) |  i ≤ j}.indicator (Function.uncurry f) := by
+      ext x
+      simp only [indicator, mem_setOf_eq, Prod.mk.injEq, and_true, exists_eq_right, uncurry]
+      cases x with
+      | mk i j =>
+
+
+      · simp!
+        sorry
+      · sorry
+
+    sorry
 
 lemma exp_form (n : ℕ) (f :  ℂ [×n]→L[ℂ ] ℂ )--ContinuousMultilinearMap ℂ (fun i ↦ ℂ) ℂ)
   (l : ℂ ) :
@@ -121,14 +166,164 @@ open scoped BigOperators
 open Complex
 
 
-
-lemma nth_deriv_of_series(r: ENNReal)  (hr: r > 0) (φ : ℂ → ℂ ) (b: ℕ ) (a : ℝ  ) --(hφ : AnalyticAt ℂ φ 0)
+--does it really need to be:
+lemma nth_deriv_of_series_hard(r: ENNReal)  (hr: r > 0) (φ : ℂ → ℂ ) (b: ℕ ) (a : ℝ  ) --(hφ : AnalyticAt ℂ φ 0)
   (ser_at_0 : FormalMultilinearSeries ℂ ℂ ℂ )
-  (on_ball_at_a  : HasFPowerSeriesOnBall φ ser_at_0 0 r)
+  (on_ball_at_0  : HasFPowerSeriesOnBall φ ser_at_0 0 r)
   (ha : (↑a : ℂ ) ∈ EMetric.ball 0 r) --perkele, tää pitää ehkä muuttaa kuitenkin abstraktimmaksi
-  : (iteratedFDeriv ℂ b φ a) (fun x ↦ l)= ∑' m, a ^m * ser_at_0.coeff (m + b) * ((m + b).factorial/m.factorial) := by
+  : (iteratedFDeriv ℂ b φ) = fun a ↦ (fun (v : Fin n → ℂ )  ↦ (∑' m, a ^m * ser_at_0.coeff (m + b) * ((m + b).factorial/m.factorial)) * ∏(i : 𝔽in n), v i ):= by
+  sorry
+
+
+lemma change_fun_alku (f g : ℂ → ℂ ) (s : Set ℂ ) (h : EqOn f g s) --(x : ℂ ) (hx : x ∈ s) --saattaa olla turha
+: EqOn (derivWithin f s) (derivWithin g s) s := by
+  unfold EqOn
+  intro a ha
+  have heq : f a = g a := by exact h ha
+  rw [derivWithin_congr h heq]
+
+lemma chagne_fun_loppu (a : ℂ ) (f g : ℂ → ℂ ) (s : Set ℂ ) (h : EqOn f g s) (heq : EqOn (derivWithin f s) (derivWithin g s) s) (ha : a ∈ s)
+: derivWithin f s a = derivWithin g s a := by
+  refine derivWithin_congr h ?_
+  exact h ha
+
+lemma simplifying_of_der  (r : ENNReal) (m b' : ℕ ) (ser_at_0 : FormalMultilinearSeries ℂ ℂ ℂ )
+: derivWithin (fun a ↦ ∑' (m : ℕ), a ^ m * ser_at_0.coeff (m + b') * (↑(m + b').factorial / ↑m.factorial))
+    (EMetric.ball 0 r) a =
+  ∑' (m : ℕ), a ^ m * ser_at_0.coeff (m + (b' + 1)) * ((↑m + ↑b' + 1) * ↑(m + b').factorial / ↑m.factorial)
+  := by
+  apply?
+  sorry
+
+
+lemma nth_deriv_of_series_valivaihe(r: ENNReal)  (hr: r > 0) (φ : ℂ → ℂ ) (b: ℕ ) --(a : ℝ  ) --(hφ : AnalyticAt ℂ φ 0)
+  (ser_at_0 : FormalMultilinearSeries ℂ ℂ ℂ )
+  (on_ball_at_0  : HasFPowerSeriesOnBall φ ser_at_0 0 r)
+ -- (ha : (↑a : ℂ ) ∈ EMetric.ball 0 r) --perkele, tää pitää ehkä muuttaa kuitenkin abstraktimmaksi
+  :EqOn (iteratedDerivWithin b φ (EMetric.ball 0 r)) ( fun a ↦ (∑' m, a ^m * ser_at_0.coeff (m + b) * ((m + b).factorial/m.factorial)) )  (EMetric.ball 0 r):= by
+  --unfold EqOn
+  induction b with | zero => _ | succ b' hb' => _
+  · intro a ha
+    simp only [iteratedDerivWithin_zero, add_zero]-- only [iteratedDeriv_zero, add_zero]
+
+    --have obv : (a : ℂ ) ∈ EMetric.ball 0 r := by sorry
+    apply on_ball_at_0.hasSum at ha
+    have now : (∑' n, (ser_at_0 n) fun x ↦ a )= (φ (0 + a)) := by
+      exact HasSum.tsum_eq ha
+    simp at now
+    rw [<- now]
+    have eq_one (n: ℕ): ((↑n.factorial : ℂ ) / (↑n.factorial: ℂ )) = 1 := by
+      refine (div_eq_one_iff_eq ?_).mpr rfl
+      rewrite [Nat.cast_ne_zero]
+      exact Nat.factorial_ne_zero n
+    conv in (↑n.factorial / ↑n.factoriaPasswordl) =>
+      rw [eq_one m]
+    simp only [mul_one]
+  · intro a ha
+    #check iteratedDerivWithin
+    rw [ iteratedDerivWithin_succ]
+    have pikkuapu := chagne_fun_loppu
+      a
+      (iteratedDerivWithin b' φ (EMetric.ball 0 r))
+      (fun a ↦ ∑' (m : ℕ), a ^ m * ser_at_0.coeff (m + b') * (↑(m + b').factorial / ↑m.factorial))
+      (EMetric.ball 0 r)
+      hb'
+      (by sorry )
+      ha
+    rw [pikkuapu]
+    clear pikkuapu
+    simp!
+    --specialize hb' ha
+
+    sorry
+  --refine iteratedFDeriv_tsum_apply ?_ ?_ ?_ ?_ ?_
 
   sorry
+
+  lemma into_within (s: Set ℂ ) (s_open : IsOpen s) (b : ℕ ) (φ : ℂ → ℂ )
+  : ∀ a' ∈ s, iteratedDeriv b φ a' = iteratedDerivWithin b φ s a':= by
+    rw [iteratedDeriv_eq_iterate]
+    induction b with | zero => _ | succ b' hb' => _
+    · simp only [iterate_zero, id_eq, iteratedDerivWithin_zero, implies_true]
+    · rw [iterate_succ']-- only [iterate_succ, comp_apply]
+      simp only [comp_apply]
+      intro a' ha'
+      rw [ iteratedDerivWithin_succ]
+      rw [<- derivWithin_of_isOpen s_open ha']
+      apply derivWithin_congr
+      · exact hb'
+      · apply hb'
+        exact ha'
+
+
+--unsure if this is doable ;_;
+lemma nth_deriv_of_series(r: ENNReal)  (hr: r > 0) (φ : ℂ → ℂ ) (b: ℕ ) (a : ℝ  ) --(hφ : AnalyticAt ℂ φ 0)
+  (ser_at_0 : FormalMultilinearSeries ℂ ℂ ℂ )
+  (on_ball_at_0  : HasFPowerSeriesOnBall φ ser_at_0 0 r) (s: Set ℂ ) (s_open : IsOpen s) (has : ↑a ∈ s)
+  (ha : (↑a : ℂ ) ∈ EMetric.ball 0 r) --perkele, tää pitää ehkä muuttaa kuitenkin abstraktimmaksi
+  : (iteratedFDeriv ℂ b φ a) (fun x ↦ l)= (∑' m, a ^m * ser_at_0.coeff (m + b) * ((m + b).factorial/m.factorial)) * l ^ b := by
+  -- induction b with | zero => _ | succ b' hb' => _
+  -- · simp only [iteratedFDeriv_zero_apply, add_zero]
+  --   have obv : (a : ℂ ) ∈ EMetric.ball 0 r := by sorry
+  --   sorry
+  --   -- apply on_ball_at_a.hasSum at obv
+  --   -- have now : (∑' n, (ser_at_0 n) fun x ↦ a )= (φ (0 + a)) := by
+  --   --   exact HasSum.tsum_eq obv
+  --   -- simp at now
+  --   -- rw [<- now]
+  --   -- have eq_one (n: ℕ): ((↑n.factorial : ℂ ) / (↑n.factorial: ℂ )) = 1 := by
+  --   --   refine (div_eq_one_iff_eq ?_).mpr rfl
+  --   --   rewrite [Nat.cast_ne_zero]
+  --   --   exact Nat.factorial_ne_zero n
+  --   -- conv in (↑n.factorial / ↑n.factoriaPasswordl) =>
+  --   --   rw [eq_one m]
+  --   -- simp only [mul_one
+
+  -- · rewrite [iteratedFDeriv_succ_apply_left]
+  --   #check (fderiv ℂ (iteratedFDeriv ℂ b' φ) a) l
+  --   --levita iteratedfderiv
+  --   --apply ass
+  --   --pitäis toimia
+   -- sorry
+  rw [exp_form b (iteratedFDeriv ℂ b φ a) l]
+  rw [<- iteratedDeriv_eq_iteratedFDeriv]
+  have ball_open : IsOpen (EMetric.ball (0 : ℂ) r) := by exact EMetric.isOpen_ball
+  have within := into_within (EMetric.ball 0 r) ball_open b φ a ha
+  rewrite [within]
+  simp only [mul_eq_mul_right_iff, pow_eq_zero_iff', ne_eq]
+  left
+
+
+
+  apply?
+  sorry
+  simp only [mul_eq_mul_right_iff, pow_eq_zero_iff', ne_eq]
+  left
+  induction b with | zero => _ | succ b' hb' => _
+  · simp
+    -- simp only [iteratedFDeriv_zero_apply, add_zero]
+    have obv : (a : ℂ ) ∈ EMetric.ball 0 r := by sorry
+    apply on_ball_at_0.hasSum at obv
+    have now : (∑' n, (ser_at_0 n) fun x ↦ a )= (φ (0 + a)) := by
+      exact HasSum.tsum_eq obv
+    simp at now
+    rw [<- now]
+    have eq_one (n: ℕ): ((↑n.factorial : ℂ ) / (↑n.factorial: ℂ )) = 1 := by
+      refine (div_eq_one_iff_eq ?_).mpr rfl
+      rewrite [Nat.cast_ne_zero]
+      exact Nat.factorial_ne_zero n
+    conv in (↑n.factorial / ↑n.factoriaPasswordl) =>
+      rw [eq_one m]
+    simp only [mul_one]
+  ·
+    #check HasFPowerSeriesOnBall.iteratedFDeriv_eq_sum_of_completeSpace on_ball_at_0
+
+    simp!
+    --rewrite [iteratedFDeriv]
+    --rewrite [iteratedFDeriv_succ_apply_left]
+    --simp only [fderiv_eq_smul_deriv, one_smul]
+
+    sorry
   -- induction b
   -- · simp only [iteratedFDeriv_zero_apply, add_zero]
   --   have obv : (a : ℂ ) ∈ EMetric.ball 0 r := by sorry
